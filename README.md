@@ -26,7 +26,7 @@ This script follows the github recommendations and:
 ## Usage
 
 ``` bash
-source <(curl -s curl https://raw.github.com/michaKFromParis/syncfork/syncfork)
+curl -fsSL https://raw.githubusercontent.com/michaKFromParis/syncfork/master/syncfork | bash -e
 ```
 
 ## Configuration
