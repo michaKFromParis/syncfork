@@ -1,0 +1,182 @@
+#!/bin/bash
+
+scriptName=`basename $0`
+scriptPath=$(cd "$(dirname "$0")"; pwd; cd - > /dev/null)
+
+verbose=false
+
+################################################################################
+############################# Log ##############################################
+################################################################################
+
+RCol='\e[0m'    # Text Reset
+
+# Regular           Bold                Underline           High Intensity      BoldHigh Intens     Background          High Intensity Backgrounds
+Bla='\e[0;30m';     BBla='\e[1;30m';    UBla='\e[4;30m';    IBla='\e[0;90m';    BIBla='\e[1;90m';   On_Bla='\e[40m';    On_IBla='\e[0;100m';
+Red='\e[0;31m';     BRed='\e[1;31m';    URed='\e[4;31m';    IRed='\e[0;91m';    BIRed='\e[1;91m';   On_Red='\e[41m';    On_IRed='\e[0;101m';
+Gre='\e[0;32m';     BGre='\e[1;32m';    UGre='\e[4;32m';    IGre='\e[0;92m';    BIGre='\e[1;92m';   On_Gre='\e[42m';    On_IGre='\e[0;102m';
+Yel='\e[0;33m';     BYel='\e[1;33m';    UYel='\e[4;33m';    IYel='\e[0;93m';    BIYel='\e[1;93m';   On_Yel='\e[43m';    On_IYel='\e[0;103m';
+Blu='\e[0;34m';     BBlu='\e[1;34m';    UBlu='\e[4;34m';    IBlu='\e[0;94m';    BIBlu='\e[1;94m';   On_Blu='\e[44m';    On_IBlu='\e[0;104m';
+Pur='\e[0;35m';     BPur='\e[1;35m';    UPur='\e[4;35m';    IPur='\e[0;95m';    BIPur='\e[1;95m';   On_Pur='\e[45m';    On_IPur='\e[0;105m';
+Cya='\e[0;36m';     BCya='\e[1;36m';    UCya='\e[4;36m';    ICya='\e[0;96m';    BICya='\e[1;96m';   On_Cya='\e[46m';    On_ICya='\e[0;106m';
+Whi='\e[0;37m';     BWhi='\e[1;37m';    UWhi='\e[4;37m';    IWhi='\e[0;97m';    BIWhi='\e[1;97m';   On_Whi='\e[47m';    On_IWhi='\e[0;107m';
+
+# Emoji unicode characters
+################################################################################
+beers=$'\360\237\215\273'
+failure=$'\360\237\215\271'
+wine=$'\360\237\215\267'
+trophy=$'\360\237\217\206'
+bomb=$'\360\237\222\243'
+strawberry=$'\xF0\x9F\x8D\x93'
+highvoltage=$'\xE2\x9A\xA1'
+banana=$'\xF0\x9F\x8D\x8C'
+cherry=$'\xF0\x9F\x8D\x92'
+success=$beers
+failure=$bomb
+completed=$trophy
+
+Log ()
+{
+  if [[ $verbose = true ]]; then
+    local timestamp=`date +%T`;
+    printf "[${IYel}$timestamp${RCol}] ${Blu}==>${RCol} $1\n"
+  fi
+}
+
+LogImportant ()
+{
+  local timestamp=`date +%T`;
+  printf "[${IYel}$timestamp${RCol}] ${Cya}==>${RCol} $1\n"
+}
+
+LogWarning ()
+{
+  local timestamp=`date +%T`;
+  printf "[${IYel}$timestamp${RCol}] ${Yel}==>${RCol} $1\n"
+}
+
+LogSuccess ()
+{
+  local timestamp=`date +%T`;
+  printf "[${IYel}$timestamp${RCol}] ${BIBlu} ${success}  Success:${RCol} $1\n"
+}
+
+LogError ()
+{
+  local timestamp=`date +%T`;
+  printf "\n[${Red}$timestamp${RCol}] ${BIRed} ${failure}  Error:${RCol} $1\n\n"
+  printf "$RCol\n"
+  exit -1
+}
+
+Execute ()
+{
+  local shellCommand=$1
+  if [ $verbose = true ]; then
+    Log "${shellCommand}"
+    eval "${shellCommand}" 2>&1
+    exitCode=${PIPESTATUS[0]}
+  else
+    eval "${shellCommand}" 2>&1
+    exitCode=${PIPESTATUS[0]}
+  fi
+  return $exitCode
+}
+
+ExecuteOrFail ()
+{
+  local shellCommand=$1
+  local message=$2
+
+  Execute "${shellCommand}"
+  exitCode=$?
+  if [ $exitCode -ne 0 ]; then
+    str=$shellCommand
+    if [ -n "$message" ]; then
+      str="$str\n$message"
+    fi
+    LogError "$str"
+  fi
+  return $exitCode
+}
+
+# Prompts the user with a [Y/n] question and returns 0 or 1
+################################################################################
+PromptYesNo ()
+{
+  while true; do
+    LogImportant "$1 [Y/n]"
+    read yn
+    case $yn in
+      [Yy]* ) Log "Ok"; return 0;;
+      [Nn]* ) return 1;;
+      ""* ) Log "Ok"; return 0;;
+      * ) LogWarning "I beg your pardon. Please answer Yes or No.";;
+    esac
+  done
+}
+
+################################################################################
+############################# Main #############################################
+################################################################################
+
+if [[ ! -f syncfork.conf ]]; then
+  LogError "Could not find syncfork.conf"
+fi
+
+source syncfork.conf
+
+if [[ $squahCommits == true ]]; then
+  squashParam='--squash'
+else
+  squashParam=''
+fi
+
+if [[ $conflictEditor == 'tower' ]]; then
+  conflictEditorPath='/Applications/Tower.app/Contents/MacOS/Tower'
+elif [[ $conflictEditor == 'github' ]]; then
+  conflictEditorPath='/Applications/GitHub.app/Contents/MacOS/GitHub'
+fi
+
+Log 'Overriding remotes'
+ExecuteOrFail "git remote rm origin"                  "Failed to remove origin remote"
+ExecuteOrFail "git remote add origin $forkUrl"        "Failed to add origin remote"
+
+ExecuteOrFail "git remote rm upstream"                "Failed to remove upstream remote"
+ExecuteOrFail "git remote add upstream $upstreamUrl"  "Failed to add upstream remote"
+
+LogImportant 'Remotes:'
+git remote -v
+
+LogImportant 'Fetching upstream'
+ExecuteOrFail "git fetch upstream"                    "Failed to fetch from upstream"
+
+Log "Checking out fork branch \"$forkBranch\""
+ExecuteOrFail "git checkout $forkBranch"              "Failed to checkout fork branch \"$forkBranch\""
+
+LogImportant "Merging upstream branch \"$upstreamBranch\""
+git merge $squashParam upstream/$upstreamBranch
+exitCode=$?
+
+echo "Exit Code: $exitCode"
+
+if [[ $exitCode -ne 0 ]]; then
+  LogWarning "Conflicts need to be resolved! Invoking editor"
+  if [[ ! -f "$conflictEditorPath" ]]; then
+    LogError "Could not find editor at path \"$conflictEditorPath\""
+  fi
+  ExecuteOrFail "$conflictEditorPath ."
+  echo -e "\n"
+  LogImportant "*****************************************************************************"
+  LogImportant "* Complete conflicts resolution before returning to this script !!!         *"
+  LogImportant "*****************************************************************************"
+  echo -e "\n"
+  if ! PromptYesNo 'Are all conflicts resolved AND commited ?'; then
+    LogError "Aborted by user"
+  fi
+fi
+
+LogImportant "Pushing updated fork to $forkUrl"
+ExecuteOrFail "git push origin $forkBranch"
+
