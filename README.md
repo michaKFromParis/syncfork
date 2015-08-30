@@ -11,9 +11,19 @@ Keep your git forks in sync with upstream remotes without headaches
 - **headache**
 
 
-## Usage
+# How ?
 
-Edit syncfork.conf at the root of your repository
+This script follows the github recommendations and:
+
+- overrides **origin** and **upstream** remotes to values defined in syncfork.conf
+- fetches the upstream modifications
+- merges the commits into your fork, optionally squashing them into one
+- invokes **tower** or **github** in case of conflicts and waits for you to resolve them manually
+- pushes the merged result to your fork
+- **no headache**
+
+
+## Usage
 
 ``` bash
 source <(curl -s curl https://raw.github.com/michaKFromParis/syncfork/syncfork)
@@ -41,7 +51,7 @@ conflictEditor='tower'
 
 **squashCommits**: If set to yes, the upstream commits will be squashed into a single commit
 
-**conflictEditor**: The editor you want to call in case of a merge conflict
+**conflictEditor**: The editor you want to call in case of a merge conflict. Valid values: **tower** or **github**
 
 --
 
