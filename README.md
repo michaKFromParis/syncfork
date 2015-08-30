@@ -39,6 +39,8 @@ conflictEditor='tower'
 
 **forkBranch**: The branch you want new changes to be synced into
 
+**squashCommits**: If set to yes, the upstream commits will be squashed into a single commit
+
 **conflictEditor**: The editor you want to call in case of a merge conflict
 
 --
